@@ -244,6 +244,7 @@ class Chrome:
                 "--homepage=about:blank", "--disable-direct-npapi-requests",
                 "--disable-web-security",
                 "about:blank"]
+        
         self.logger.info("running {}".format(chrome_args))
         self.chrome_process = subprocess.Popen(chrome_args, env=new_env, start_new_session=True)
         self.logger.info("chrome running, pid {}".format(self.chrome_process.pid))
