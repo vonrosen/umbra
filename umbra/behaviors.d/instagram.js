@@ -1,78 +1,135 @@
-// {"url_regex":"^https?://(?:www\\.)?instagram\\.com/.*$", "request_idle_timeout_sec":10}
-//
 // vim:set sw=8 et:
 //
 
-var umbraState = {'idleSince':null,'done':null};
+var umbraInstagramBehavior = {
+        IDLE_TIMEOUT_SEC: 20,
+        idleSince: null,
+        state: "loading-thumbs",
+        imageCount: null,
+        bigImagesLoaded: 0,
+        currentBigImage: null,
+        previousBigImage: null,
 
+        intervalFunc: function() {
+                if (this.state === "loading-thumbs") {
+                        if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight) { 
+                                window.scrollBy(0, 200);
+                                this.idleSince = null;
+                                return;
+                        } 
 
-var intervalID = setInterval(scrollInterval,50);
-var images;
-var imageID=0;
-var imageCount=0;
-function scrollInterval() {
-   scroll();
+                        var moreButtons = document.querySelectorAll(".PhotoGridMoreButton:not(.pgmbDisabled)");
+                        if (moreButtons.length > 0) {
+                                console.log("clicking load more button");
+                                moreButtons[0].click();
+                                this.idleSince = null;
+                                return;
+                        } 
+                        
+                        if (this.idleSince == null) {
+                                console.log("nothing to do at the moment, might be waiting for something to load, setting this.idleSince=Date.now()");
+                                this.idleSince = Date.now();
+                                return;
+                        } else {
+                                var doneButtons = document.querySelectorAll(".PhotoGridMoreButton.pgmbDisabled");
+                                if (Date.now() - this.idleSince > 9000 || (doneButtons.length > 0 && doneButtons[0].innerText === "All items loaded") ) {
+                                        console.log("finished loading-thumbs, it appears we have reached the bottom");
+                                        this.state = "clicking-first-thumb";
+                                        this.idleSince = null;
+                                        return;
+                                } else { 
+                                        // console.log("still might be waiting for something to load...");
+                                        return;
+                                }
+                        } 
+                } 
 
-   //if not at the bottom
-   if(window.scrollY + window.innerHeight < document.documentElement.scrollHeight) {
-       umbraState.idleSince=Date.now();
-   }
-   else {
-	var more = document.querySelectorAll("span.more-photos a.more-photos-enabled");
-	if(more.length>0) {
-	    more[0].click();
-	    umbraState.idleSince=Date.now();
-	}
-	else if(document.querySelectorAll("span.more-photos a.more-photos-disabled").length>0) { //finally done scrolling/loading
-	    clearInterval(intervalID);
-	    umbraState.idleSince=null;
-	    images = document.querySelectorAll("li.photo div.photo-wrapper a.bg[data-reactid]");
-	    if(images && images !=='undefined' && images.length>0 ) {
-		images[0].click();
-		imageID++;
-		imageCount=images.length;
-	    }
-	    intervalID = setInterval(clickPhotosInterval,200);
-	}
-   }
-}
+                if (this.state === "clicking-first-thumb") {
+                        var images = document.querySelectorAll("a.pgmiImageLink");
+                        if (images && images !== "undefined") {
+                                this.imageCount = images.length;
+                                if (images.length > 0) {
+                                        console.log("clicking first thumbnail");
+                                        images[0].click();
+                                        this.idleSince = null;
+                                        this.state = "waiting-big-image";
+                                        return;
+                                }
+                        }
 
-function clickPhotosInterval() {
-    rightArrow = document.querySelectorAll("a.mmRightArrow");
-    
-    if(imageID>=imageCount) {
-	clearInterval(intervalID);
-	umbraState.done=true;
-	umbraState.idleSince=(Date.now()-50000);//ready to exit
-    }
-    else {
-	rightArrow[0].click();
-	imageID++;
-	umbraState.idleSince=Date.now();
-    }
-}
+                        console.log("no big images to load?");
+                        this.idleSince = Date.now();
+                        return;
+                }
 
-function scroll() {
-    window.scrollBy(0,50);
-}
+                if (this.state === "waiting-big-image") {
+                        if(this.currentBigImage == null) {
+                                var imageFrame = document.querySelectorAll("div.Modal div.Item div.iMedia div.Image");
+                                if (imageFrame.length > 0 && imageFrame[0].getAttribute("src") !== this.previousBigImage ) {
+                                        this.currentBigImage = new Image();
+                                        this.currentBigImage.src = imageFrame[0].getAttribute("src");
+                                        //console.log("this.currentBigImage.naturalWidth=" + this.currentBigImage.naturalWidth + " this.currentBigImage.src=" + this.currentBigImage.src);
+                                        return;
+                                } else if(this.idleSince == null ) {
+                                        console.log("waiting for image frame to load");
+                                        this.idleSince = Date.now();
+                                        return;
+                                }
+                        } else if (this.currentBigImage.src !== this.previousBigImage && this.currentBigImage.naturalWidth !== 0) {
+                                console.log("next big image appears loaded, will click right arrow next time");
+                                this.state = "click-next-big-image";
+                                this.previousBigImage = this.currentBigImage.src;
+                                this.currentBigImage = null;
+                                this.bigImagesLoaded++;
+                                this.idleSince = null;
 
+                                if (this.bigImagesLoaded >= this.imageCount) {
+                                        console.log("looks like we're done, we've loaded all " + this.bigImagesLoaded + " of " + this.imageCount + " big images");
+                                        this.state = "finished";
+                                        this.idleSince = Date.now();
+                                }
+                                return;
+                        } else if(this.idleSince == null) {
+                                console.log("Waiting for big image to load");
+                                this.idleSince = Date.now();
+                                return;
+                        }
 
-// If we haven't had anything to do (scrolled, clicked, etc) in this amount of
-// time, then we consider ourselves finished with the page.
+                }
 
-var UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC = 10;
+                if (this.state === "click-next-big-image") {
+                        var rightArrow = document.querySelectorAll("a.mmRightArrow");
+                        if (rightArrow.length > 0) {
+                                // console.log("clicking right arrow");
+                                rightArrow[0].click();
+                                this.state = "waiting-big-image";
+                                this.idleSince = null;
+                                return;
+                        } else {
+                                console.warn("no right arrow to click?? weird");
+                                this.idleSince = Date.now();
+                                return;
+                        }
+                }
+        },
+
+        start: function() {
+                var that = this;
+                this.intervalId = setInterval(function(){ that.intervalFunc() }, 50);
+        },
+
+        isFinished: function() {
+                if (this.idleSince != null) {
+                        var idleTimeMs = Date.now() - this.idleSince;
+                        if (idleTimeMs / 1000 > this.IDLE_TIMEOUT_SEC) {
+                                return true;
+                        }
+                }
+                return false;
+        },
+};
 
 // Called from outside of this script.
-var umbraBehaviorFinished = function() {
-    if(umbraState.done!=null && umbraState.done==true) {
-	return true;
-    }
-    if (umbraState.idleSince != null) {
-	var idleTimeMs = Date.now() - umbraState.idleSince;
-	if (idleTimeMs / 1000 > UMBRA_USER_ACTION_IDLE_TIMEOUT_SEC) {
-	    return true;
-	}
-    }
-    return false;
-}
-    
+var umbraBehaviorFinished = function() { return umbraInstagramBehavior.isFinished() };
+
+umbraInstagramBehavior.start();
