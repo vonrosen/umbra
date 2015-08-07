@@ -6,6 +6,7 @@ import os
 import re
 import logging
 import time
+import random
 import sys
 import yaml
 import string
@@ -37,7 +38,10 @@ class Behavior:
                     behavior["script"] = open(behavior_js, encoding="utf-8").read()
                 elif "click_css_selector" in behavior:
                     if "scroll" in behavior and behavior["scroll"] == True:
-                        behavior["script"] = simplescrollsandclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], iframe_css_selector=behavior["iframe_css_selector"])
+                        if "iframe_css_selector" in behavior:
+                            behavior["script"] = simplescrollsandclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], iframe_css_selector=behavior["iframe_css_selector"])
+                        else:
+                            behavior["script"] = simplescrollsandclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], iframe_css_selector="uniq-selector-for-nothing-" + str(random.randint(0,99999999)))
                     else:
                         behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"])
 
