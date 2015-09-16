@@ -26,18 +26,12 @@ class Behavior:
             simpleclicks_js_in = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + ["simpleclicks.js.in"])
             with open(simpleclicks_js_in) as fin:
                 simpleclicks_js_template = string.Template(fin.read())
-                
+
             for behavior in Behavior._behaviors:
                 if "behavior_js" in behavior:
                     behavior_js = os.path.sep.join(__file__.split(os.path.sep)[:-1] + ["behaviors.d"] + [behavior["behavior_js"]])
                     behavior["script"] = open(behavior_js, encoding="utf-8").read()
                 elif "click_css_selector" in behavior:
-<<<<<<< HEAD
-                    if "iframe_css_selector" not in behavior:
-                        behavior["iframe_css_selector"] = "";
-                        
-                    behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], iframe_css_selector=behavior["iframe_css_selector"])
-=======
                         if "click_css_selector_end_condition" not in behavior:
                             behavior["click_css_selector_end_condition"] = "";   
                             
@@ -45,7 +39,6 @@ class Behavior:
                             behavior["click_css_selector_computed_style_end_condition"] = "";                            
                                              
                         behavior["script"] = simpleclicks_js_template.substitute(click_css_selector=behavior["click_css_selector"], click_css_selector_end_condition=behavior["click_css_selector_end_condition"], click_css_selector_computed_style_end_condition=behavior["click_css_selector_computed_style_end_condition"])
->>>>>>> AITFIVE-451-2
 
         return Behavior._behaviors
 
