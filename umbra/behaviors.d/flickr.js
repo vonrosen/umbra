@@ -1,17 +1,40 @@
 // vim:set sw=8 et:
 
-setInterval(function() { window.scrollBy(0,50); }, 100);
+var UMBRA_TIME_TO_WAIT_BEFORE_CLICK_PHOTOSTREAM = 10000;
+var UMBRA_TIME_TO_WAIT_FOR_PAGE_LOAD = 5000;
+var UMBRA_PHOTOSTREAM_CLICK_LIMIT = 100;
+var clicksCompleted = 0;
+
+setInterval(function() {	
+	if (clicksCompleted > UMBRA_PHOTOSTREAM_CLICK_LIMIT) return;
+	
+	window.scrollBy(0,50); 
+}, 100);
 
 setTimeout(function() { 
-        a = document.evaluate("//a[contains(@class, 'sn-ico-slideshow')]", document, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null ); 
-        f = a.iterateNext(); 
-        f.click();
-}, 5000);
+	//click on first photo in photo-stream
+	var firstPhoto = document.querySelector(".overlay")
+	
+	if (firstPhoto) {
+		firstPhoto.click();
+		
+		setTimeout(function() {
+			setInterval(function() {
+				if (clicksCompleted > UMBRA_PHOTOSTREAM_CLICK_LIMIT) return;
+				
+				var nextButton = document.querySelector(".navigate-target.navigate-next")
+				if (nextButton) {
+					nextButton.click();
+					clicksCompleted++;
+				}
+			}, 1000);
+		}, UMBRA_TIME_TO_WAIT_FOR_PAGE_LOAD);
+	}
+	
+	
+}, UMBRA_TIME_TO_WAIT_BEFORE_CLICK_PHOTOSTREAM);
 
-setTimeout(function() { 
-        a = document.evaluate("//a[contains(@data-track, 'photo-click')]", document, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null ); 
-        setInterval(function() { 
-                f = a.iterateNext(); 
-                f.click();
-        }, 5000);
-}, 5000);
+//Called from outside of this script.
+var umbraBehaviorFinished = function() {
+	return (clicksCompleted > UMBRA_PHOTOSTREAM_CLICK_LIMIT);
+}
